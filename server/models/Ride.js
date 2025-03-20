@@ -86,7 +86,7 @@ const RideSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ["credit_card", "paypal", "cash"],
+    enum: ["credit_card", "paypal", "cash", "card"],
     default: "cash",
   },
   route: {

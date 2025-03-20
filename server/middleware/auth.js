@@ -3,19 +3,17 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Rider = require("../models/Rider");
 
+// ... existing code ...
 exports.protect = async (req, res, next) => {
   let token;
 
-  // Check if auth header exists and has the right format
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith("Bearer")
   ) {
-    // Set token from Bearer token in header
     token = req.headers.authorization.split(" ")[1];
   }
 
-  // Check if token exists
   if (!token) {
     return res.status(401).json({
       success: false,
@@ -24,16 +22,17 @@ exports.protect = async (req, res, next) => {
   }
 
   try {
-    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Check if token is for user or rider
-    if (decoded.type === "rider") {
-      req.user = await Rider.findById(decoded.id);
-      req.userType = "rider";
+    // Add admin type check
+    if (decoded.type === "admin") {
+      req.user = await Admin.findById(decoded.id);
+      req.userType = "admin";
     } else {
-      req.user = await User.findById(decoded.id);
-      req.userType = "user";
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to access admin routes",
+      });
     }
 
     next();

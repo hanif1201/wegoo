@@ -38,6 +38,8 @@ app.get("/", (req, res) => {
 // API routes
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/rides", require("./routes/rides"));
+app.use("/api/auth/admin", require("./routes/admin"));
+app.use("/api/admin", require("./routes/admin"));
 // Add additional routes here as they are created
 
 // Error handling middleware
