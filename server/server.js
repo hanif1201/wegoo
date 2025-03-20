@@ -26,7 +26,23 @@ const io = socketio(server, {
 
 // Middleware
 app.use(express.json());
-app.use(cors());
+// app.use(cors());
+app.use(
+  cors({
+    origin: "*",
+    credentials: true,
+    optionsSuccessStatus: 200,
+  })
+);
+app.use((req, res, next) => {
+  console.log("Incoming request:", {
+    method: req.method,
+    path: req.path,
+    headers: req.headers,
+    body: req.body,
+  });
+  next();
+});
 app.use(helmet());
 app.use(morgan("dev"));
 
@@ -35,28 +51,71 @@ app.get("/", (req, res) => {
   res.send("Rider App API Running");
 });
 
+// // Add this before the admin routes in server.js
+// app.use("/api/admin", (req, res, next) => {
+//   console.log("Admin route accessed:", req.method, req.path);
+//   console.log("Auth header:", req.headers.authorization);
+//   next();
+// });
+
+// app.use("/api/auth/admin", (req, res, next) => {
+//   console.log("Admin auth route accessed:", req.method, req.path);
+//   console.log("Auth header:", req.headers.authorization);
+//   next();
+// });
+// Add this BEFORE your routes
+app.use((req, res, next) => {
+  // Log all requests
+  // console.log(`🔍 Request: ${req.method} ${req.path}`);
+
+  // Log when response is sent
+  res.on("finish", () => {
+    // console.log(`📤 Response: ${res.statusCode} ${req.method} ${req.path}`);
+  });
+
+  next();
+});
 // API routes
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/rides", require("./routes/rides"));
 app.use("/api/auth/admin", require("./routes/admin"));
 app.use("/api/admin", require("./routes/admin"));
+app.use("/api/auth", require("./routes/auth"));
+// app.use("/api/users", require("./routes/user"));
 // Add additional routes here as they are created
 
 // Error handling middleware
+// app.use((err, req, res, next) => {
+//   console.error(err.stack);
+//   res.status(500).send("Server Error");
+// });
+
+// Modify your error handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send("Server Error");
+  // console.error("❌ Error details:", {
+  //   message: err.message,
+  //   stack: err.stack,
+  //   status: err.status || 500,
+  //   path: req.path,
+  //   method: req.method,
+  //   headers: req.headers,
+  // });
+
+  res.status(err.status || 500).json({
+    error: err.message || "Server Error",
+    path: req.path,
+  });
 });
 
 // Set up socket.io connection handler
 io.on("connection", (socket) => {
-  console.log(`New WebSocket connection: ${socket.id}`);
+  // console.log(`New WebSocket connection: ${socket.id}`);
 
   // Pass socket to the socket handler
   require("./socket")(io, socket);
 
   socket.on("disconnect", () => {
-    console.log(`WebSocket disconnected: ${socket.id}`);
+    // console.log(`WebSocket disconnected: ${socket.id}`);
   });
 });
 

@@ -45,7 +45,9 @@ export const fetchUserStats = createAsyncThunk(
   "users/fetchStats",
   async (_, { rejectWithValue }) => {
     try {
-      return await userService.getUserStats();
+      const response = await userService.getUserStats();
+      console.log("User stats response:", response.data);
+      return response.data;
     } catch (error) {
       return rejectWithValue(
         error.response?.data || { message: "Failed to fetch user statistics" }
