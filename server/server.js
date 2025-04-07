@@ -30,7 +30,7 @@ app.use(express.json());
 app.use(
   cors({
     origin: [
-      "https://your-app-admin.onrender.com", // Your Render frontend URL
+      "https://wegoo-sepia.vercel.app/", // Your Render frontend URL
       "http://localhost:3000", // Keep for local development
     ],
     credentials: true,
