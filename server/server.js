@@ -29,9 +29,11 @@ app.use(express.json());
 // app.use(cors());
 app.use(
   cors({
-    origin: "*",
+    origin: [
+      "https://your-app-admin.onrender.com", // Your Render frontend URL
+      "http://localhost:3000", // Keep for local development
+    ],
     credentials: true,
-    optionsSuccessStatus: 200,
   })
 );
 app.use((req, res, next) => {
