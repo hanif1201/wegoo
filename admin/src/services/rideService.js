@@ -19,6 +19,15 @@ export const updateRideStatus = async (rideId, status) => {
 };
 
 export const getRideStats = async (period = "week") => {
-  const response = await api.get(`/admin/rides/stats?period=${period}`);
-  return response.data;
+  try {
+    const response = await api.get(`/admin/rides/stats?period=${period}`);
+    console.log("Ride stats response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error(
+      "Error fetching ride stats:",
+      error.response?.data || error.message
+    );
+    throw error;
+  }
 };

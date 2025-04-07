@@ -46,8 +46,7 @@ export const fetchUserStats = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await userService.getUserStats();
-      console.log("User stats response:", response.data);
-      return response.data;
+      return response; // Return the entire response
     } catch (error) {
       return rejectWithValue(
         error.response?.data || { message: "Failed to fetch user statistics" }
@@ -137,7 +136,7 @@ const usersSlice = createSlice({
       })
       .addCase(fetchUserStats.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.stats = action.payload.data;
+        state.stats = action.payload; // Store the entire response
       })
       .addCase(fetchUserStats.rejected, (state, action) => {
         state.isLoading = false;
