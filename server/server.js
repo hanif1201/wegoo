@@ -1,11 +1,11 @@
-// Update your server.js file
+// server.js
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-const http = require("http"); // Add this
-const socketio = require("socket.io"); // Add this
+const http = require("http");
+const socketio = require("socket.io");
 const connectDB = require("./config/db");
 
 // Load environment variables
@@ -16,26 +16,34 @@ connectDB();
 
 // Initialize app
 const app = express();
-const server = http.createServer(app); // Create HTTP server
+const server = http.createServer(app);
 const io = socketio(server, {
   cors: {
-    origin: "*", // Allow all origins in development
+    origin: "*",
     methods: ["GET", "POST"],
   },
-}); // Initialize Socket.io
+});
 
 // Middleware
 app.use(express.json());
-// app.use(cors());
+
+// Correct CORS configuration
 app.use(
   cors({
     origin: [
-      "https://wegoo-sepia.vercel.app/api", // Your Render frontend URL
-      "http://localhost:3000/api", // Keep for local development
+      "https://wegoo-sepia.vercel.app", // Remove /api
+      "http://localhost:3000", // Remove /api
     ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Added methods
     credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"], // Added allowed headers
   })
 );
+
+// Handle OPTIONS preflight requests
+app.options("*", cors());
+
+// Debug middleware for incoming requests
 app.use((req, res, next) => {
   console.log("Incoming request:", {
     method: req.method,
@@ -45,64 +53,32 @@ app.use((req, res, next) => {
   });
   next();
 });
+
+// Security and logging middleware
 app.use(helmet());
 app.use(morgan("dev"));
 
-// Define routes
+// Basic health check endpoint
 app.get("/", (req, res) => {
   res.send("Rider App API Running");
 });
 
-// // Add this before the admin routes in server.js
-// app.use("/api/admin", (req, res, next) => {
-//   console.log("Admin route accessed:", req.method, req.path);
-//   console.log("Auth header:", req.headers.authorization);
-//   next();
-// });
-
-// app.use("/api/auth/admin", (req, res, next) => {
-//   console.log("Admin auth route accessed:", req.method, req.path);
-//   console.log("Auth header:", req.headers.authorization);
-//   next();
-// });
-// Add this BEFORE your routes
+// General request logging middleware
 app.use((req, res, next) => {
-  // Log all requests
-  // console.log(`🔍 Request: ${req.method} ${req.path}`);
-
   // Log when response is sent
   res.on("finish", () => {
     // console.log(`📤 Response: ${res.statusCode} ${req.method} ${req.path}`);
   });
-
   next();
 });
-// API routes
+
+// API routes - fixed to remove duplicates
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/rides", require("./routes/rides"));
-app.use("/api/auth/admin", require("./routes/admin"));
 app.use("/api/admin", require("./routes/admin"));
-app.use("/api/auth", require("./routes/auth"));
-// app.use("/api/users", require("./routes/user"));
-// Add additional routes here as they are created
 
 // Error handling middleware
-// app.use((err, req, res, next) => {
-//   console.error(err.stack);
-//   res.status(500).send("Server Error");
-// });
-
-// Modify your error handler
 app.use((err, req, res, next) => {
-  // console.error("❌ Error details:", {
-  //   message: err.message,
-  //   stack: err.stack,
-  //   status: err.status || 500,
-  //   path: req.path,
-  //   method: req.method,
-  //   headers: req.headers,
-  // });
-
   res.status(err.status || 500).json({
     error: err.message || "Server Error",
     path: req.path,
@@ -111,8 +87,6 @@ app.use((err, req, res, next) => {
 
 // Set up socket.io connection handler
 io.on("connection", (socket) => {
-  // console.log(`New WebSocket connection: ${socket.id}`);
-
   // Pass socket to the socket handler
   require("./socket")(io, socket);
 

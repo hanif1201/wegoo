@@ -1,11 +1,11 @@
 // src/services/api.js
 import axios from "axios";
 
-// Use your actual API URL
+// Fixed API URL with /api path
 const API_URL =
   process.env.NODE_ENV === "production"
-    ? "https://wegoo.onrender.com" // Replace with your actual Render URL
-    : "http://localhost:5000";
+    ? "https://wegoo.onrender.com/api" // Added /api and fixed double https://
+    : "http://localhost:5000/api"; // Added /api
 
 const api = axios.create({
   baseURL: API_URL,
