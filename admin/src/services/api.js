@@ -1,11 +1,17 @@
 // src/services/api.js
 import axios from "axios";
 
+// First, let's log the current environment
+console.log("Current NODE_ENV:", process.env.NODE_ENV);
+
 // Fixed API URL with /api path
 const API_URL =
   process.env.NODE_ENV === "production"
-    ? "https://wegoo.onrender.com/api" // Added /api and fixed double https://
-    : "http://localhost:5000/api"; // Added /api
+    ? "https://wegoo.onrender.com/api"
+    : "http://localhost:5000/api";
+
+// Log the selected API URL to check what's being used
+console.log("Selected API_URL:", API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
@@ -14,9 +20,11 @@ const api = axios.create({
   },
 });
 
-// Add a request interceptor for auth token
+// Log each request for debugging
 api.interceptors.request.use(
   (config) => {
+    console.log("Making request to:", config.baseURL + config.url);
+
     const token = localStorage.getItem("adminToken");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -27,18 +35,3 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
-
-// Add a response interceptor for error handling
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // Handle 401 errors by redirecting to login
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem("adminToken");
-      window.location.href = "/login";
-    }
-    return Promise.reject(error);
-  }
-);
-
-export default api;
