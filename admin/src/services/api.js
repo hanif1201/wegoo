@@ -7,8 +7,8 @@ console.log("Current NODE_ENV:", process.env.NODE_ENV);
 // Fixed API URL with /api path
 const API_URL =
   process.env.NODE_ENV === "production"
-    ? "https://wegoo.onrender.com/api"
-    : "http://localhost:5000/api";
+    ? "https://wegoo.onrender.com"
+    : "http://localhost:5000";
 
 // Log the selected API URL to check what's being used
 console.log("Selected API_URL:", API_URL);
