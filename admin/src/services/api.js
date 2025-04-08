@@ -1,17 +1,7 @@
-// src/services/api.js
 import axios from "axios";
 
-// First, let's log the current environment
-console.log("Current NODE_ENV:", process.env.NODE_ENV);
-
-// Fixed API URL with /api path
-const API_URL =
-  process.env.NODE_ENV === "production"
-    ? "https://wegoo.onrender.com"
-    : "http://localhost:5000";
-
-// Log the selected API URL to check what's being used
-console.log("Selected API_URL:", API_URL);
+// Simple, direct URL without any string concatenation
+const API_URL = "https://wegoo.onrender.com"; // Just this, nothing else
 
 const api = axios.create({
   baseURL: API_URL,
@@ -20,18 +10,13 @@ const api = axios.create({
   },
 });
 
-// Log each request for debugging
+// Add this to see exactly what URL is being used
 api.interceptors.request.use(
   (config) => {
     console.log("Making request to:", config.baseURL + config.url);
-
-    const token = localStorage.getItem("adminToken");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
+
+export default api;
