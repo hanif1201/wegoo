@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // Simple, direct URL without any string concatenation
-const API_URL = "https://wegoo.onrender.com"; // Just this, nothing else
+const API_URL = "http://localhost:5000"; // Just this, nothing else
 
 const api = axios.create({
   baseURL: API_URL,
