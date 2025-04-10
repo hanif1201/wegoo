@@ -3,12 +3,8 @@ import api from "./api";
 
 export const login = async (credentials) => {
   try {
-    // Path depends on your route structure in backend:
-    // Option 1: If admin routes are in auth.js with admin prefix
-    const response = await api.post("/auth/admin/login", credentials);
-
-    // Option 2: If admin routes are in admin.js without admin prefix
-    // const response = await api.post("/admin/login", credentials);
+    // Update the path to match server route structure
+    const response = await api.post("/api/admin/login", credentials);
 
     if (response.data && response.data.token) {
       localStorage.setItem("adminToken", response.data.token);
