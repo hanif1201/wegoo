@@ -1,7 +1,7 @@
 import axios from "axios";
 
-// Simple, direct URL without any string concatenation
-const API_URL = "http://localhost:5000"; // Just this, nothing else
+// Use your actual API URL
+const API_URL = "http://localhost:5000/api";
 
 const api = axios.create({
   baseURL: API_URL,
