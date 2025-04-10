@@ -19,15 +19,6 @@ export const updateUserStatus = async (userId, status) => {
 };
 
 export const getUserStats = async () => {
-  try {
-    const response = await api.get("/admin/users/stats");
-    console.log("User stats response:", response.data);
-    return response.data;
-  } catch (error) {
-    console.error(
-      "Error fetching user stats:",
-      error.response?.data || error.message
-    );
-    throw error;
-  }
+  const response = await api.get("/admin/users/stats");
+  return response.data;
 };

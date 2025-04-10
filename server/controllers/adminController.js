@@ -191,49 +191,33 @@ exports.updateUserStatus = async (req, res) => {
 // Get statistics for dashboard
 exports.getUserStats = async (req, res) => {
   try {
-    // Add debug logging
-    console.log("Fetching ride count...");
-
-    // Get all completed rides instead of just counting
-    const rides = await Ride.find({}).lean();
-    console.log("All rides:", rides);
-
-    const totalRides = rides.length;
-    console.log("Total rides found:", totalRides);
-
-    // Calculate total revenue from completed rides
-    const totalRevenue = rides.reduce((sum, ride) => {
-      console.log("Processing ride:", ride._id, "Fare:", ride.fare?.total);
-      return sum + (ride.fare?.total || 0);
-    }, 0);
-    console.log("Total revenue calculated:", totalRevenue);
-
     const totalUsers = await User.countDocuments();
     const totalRiders = await Rider.countDocuments();
     const newUsersToday = await User.countDocuments({
       createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
     });
 
+    // Calculate retention rate (simplified example)
     const activeUsers = await User.countDocuments({ status: "active" });
-    const retentionRate = totalUsers > 0 ? (activeUsers / totalUsers) * 100 : 0;
+    const retentionRate = (activeUsers / totalUsers) * 100;
 
     res.status(200).json({
       success: true,
-      totalUsers,
-      totalRiders,
-      totalRides,
-      totalRevenue, // Add this to the response
-      newUsersToday,
-      retentionRate: Number(retentionRate.toFixed(2)),
+      data: {
+        totalUsers,
+        totalRiders,
+        newUsersToday,
+        retentionRate,
+      },
     });
   } catch (error) {
-    console.error("Error in getUserStats:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch user statistics",
+      message: error.message,
     });
   }
 };
+
 // RIDER MANAGEMENT
 // Get all riders with pagination
 exports.getRiders = async (req, res) => {
@@ -427,21 +411,31 @@ exports.getRiderStats = async (req, res) => {
       verificationStatus: "pending",
     });
 
-    // Get all completed rides
+    // Calculate average ratings and earnings
     const rides = await Ride.find({ status: "completed" });
-    const totalRides = rides.length; // Count all rides
 
-    // Calculate total earnings from all rides
     const totalEarnings = rides.reduce((sum, ride) => sum + ride.fare.total, 0);
+
+    // Get rider ratings
+    const ridersWithRatings = await Rider.find({
+      rating: { $exists: true, $ne: null },
+    });
+    const avgRating =
+      ridersWithRatings.length > 0
+        ? ridersWithRatings.reduce((sum, rider) => sum + rider.rating, 0) /
+          ridersWithRatings.length
+        : 0;
 
     res.status(200).json({
       success: true,
-      totalRiders,
-      activeRiders,
-      totalRides,
-      pendingVerification,
-      totalEarnings,
-      avgEarningsPerRider: totalRiders > 0 ? totalEarnings / totalRiders : 0,
+      data: {
+        totalRiders,
+        activeRiders,
+        pendingVerification,
+        totalEarnings,
+        avgRating,
+        avgEarningsPerRider: totalRiders > 0 ? totalEarnings / totalRiders : 0,
+      },
     });
   } catch (error) {
     res.status(500).json({

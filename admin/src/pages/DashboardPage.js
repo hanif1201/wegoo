@@ -83,8 +83,8 @@ const DashboardPage = () => {
   // Safely access values with defaults
   const totalUsers = userStats?.totalUsers || 0;
   const totalRiders = userStats?.totalRiders || 0;
-  const totalRides = userStats?.totalRides || 0;
-  const totalRevenue = userStats?.totalRevenue || 0;
+  const totalRides = rideStats?.totalRides || 0;
+  const totalRevenue = rideStats?.totalRevenue || 0;
   const avgDistance = rideStats?.avgDistance || 0;
   const avgDuration = rideStats?.avgDuration || 0;
   const avgFare = rideStats?.avgFare || 0;
@@ -94,7 +94,7 @@ const DashboardPage = () => {
     <Layout title='Dashboard'>
       <Box sx={{ mb: 4 }}>
         <Typography variant='h4' gutterBottom>
-          Welcome to WeGoo Admin
+          Welcome to Rider App Admin
         </Typography>
         <Typography variant='body1' color='text.secondary'>
           Here's what's happening with your platform today

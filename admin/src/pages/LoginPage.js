@@ -51,7 +51,7 @@ const LoginPage = () => {
         <Card>
           <CardContent sx={{ p: 4 }}>
             <Typography variant='h4' component='h1' align='center' gutterBottom>
-              WeGoo Admin Panel
+              Rider App Admin Panel
             </Typography>
             <Typography
               variant='body1'
