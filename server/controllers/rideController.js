@@ -347,3 +347,70 @@ exports.rateRide = async (req, res) => {
     });
   }
 };
+
+// @desc    Get ride statistics
+// @route   GET /api/admin/rides/stats
+// @access  Private/Admin
+exports.getRideStats = async (req, res) => {
+  try {
+    console.log("Starting getRideStats...");
+    const { period } = req.query;
+
+    // Calculate date range
+    const dateRange = getDateRange(period);
+
+    const stats = await Ride.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: dateRange.start, $lte: dateRange.end },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalRides: { $sum: 1 },
+          totalDistance: { $sum: "$distance" },
+          avgDuration: { $avg: "$duration" },
+          revenue: { $sum: "$fare" },
+        },
+      },
+    ]);
+
+    res.json({
+      success: true,
+      data: stats[0] || {
+        totalRides: 0,
+        totalDistance: 0,
+        avgDuration: 0,
+        revenue: 0,
+      },
+    });
+  } catch (error) {
+    console.error("Error in getRideStats:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+function getDateRange(period) {
+  const end = new Date();
+  const start = new Date();
+
+  switch (period) {
+    case "week":
+      start.setDate(start.getDate() - 7);
+      break;
+    case "month":
+      start.setMonth(start.getMonth() - 1);
+      break;
+    case "year":
+      start.setFullYear(start.getFullYear() - 1);
+      break;
+    default:
+      start.setDate(start.getDate() - 7); // Default to week
+  }
+
+  return { start, end };
+}

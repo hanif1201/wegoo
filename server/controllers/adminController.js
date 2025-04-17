@@ -194,38 +194,56 @@ exports.updateUserStatus = async (req, res) => {
   }
 };
 
-// Get user statistics
+// @desc    Get user statistics
+// @route   GET /api/admin/user-stats
+// @access  Private/Admin
 exports.getUserStats = async (req, res) => {
   try {
+    console.log("Starting getUserStats...");
+
     const stats = await User.aggregate([
       {
         $group: {
           _id: null,
-          total: { $sum: 1 },
-          active: {
+          totalUsers: { $sum: 1 },
+          activeUsers: {
             $sum: {
-              $cond: [{ $eq: ["$status", "active"] }, 1, 0],
+              $cond: [{ $eq: ["$isActive", true] }, 1, 0],
             },
           },
-          inactive: {
+          verifiedUsers: {
             $sum: {
-              $cond: [{ $eq: ["$status", "inactive"] }, 1, 0],
+              $cond: [{ $eq: ["$isVerified", true] }, 1, 0],
             },
           },
         },
       },
+      {
+        $project: {
+          _id: 0,
+          totalUsers: 1,
+          activeUsers: 1,
+          verifiedUsers: 1,
+        },
+      },
     ]);
 
-    res.json({
+    res.status(200).json({
       success: true,
-      data: stats[0] || { total: 0, active: 0, inactive: 0 },
+      data: stats[0] || {
+        totalUsers: 0,
+        activeUsers: 0,
+        verifiedUsers: 0,
+      },
     });
   } catch (error) {
-    console.error("Error getting user stats:", error);
-    res.status(500).json({ message: "Error fetching user statistics" });
+    console.error("Error in getUserStats:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
-
 // RIDER MANAGEMENT
 // Get all riders with pagination
 exports.getRiders = async (req, res) => {
@@ -580,54 +598,90 @@ exports.updateRideStatus = async (req, res) => {
   }
 };
 
-// Get ride statistics
+// @desc    Get ride statistics
+// @route   GET /api/admin/ride-stats
+// @access  Private/Admin
 exports.getRideStats = async (req, res) => {
   try {
+    console.log("Starting getRideStats...");
     const { period } = req.query;
-    let dateFilter = {};
+    console.log("Period:", period);
 
+    // First, check if Ride model exists
+    if (!Ride) {
+      console.error("Ride model not found");
+      return res.status(500).json({
+        success: false,
+        message: "Ride model not properly initialized",
+      });
+    }
+
+    // Simple count first to verify database connection
+    const rideCount = await Ride.countDocuments();
+    console.log("Total rides found:", rideCount);
+
+    let dateFilter = {};
     if (period === "week") {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
       dateFilter = {
-        createdAt: {
-          $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        },
+        createdAt: { $gte: weekAgo },
       };
     }
+
+    console.log("Date filter:", dateFilter);
 
     const stats = await Ride.aggregate([
       {
         $match: dateFilter,
       },
       {
-        $group: {
-          _id: null,
-          total: { $sum: 1 },
-          completed: {
-            $sum: {
-              $cond: [{ $eq: ["$status", "completed"] }, 1, 0],
+        $facet: {
+          totalCount: [{ $count: "count" }],
+          statusCounts: [
+            {
+              $group: {
+                _id: "$status",
+                count: { $sum: 1 },
+              },
             },
-          },
-          cancelled: {
-            $sum: {
-              $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0],
-            },
-          },
-          active: {
-            $sum: {
-              $cond: [{ $eq: ["$status", "active"] }, 1, 0],
-            },
-          },
+          ],
         },
       },
     ]);
 
+    console.log("Aggregation result:", stats);
+
+    const totalCount = stats[0].totalCount[0]?.count || 0;
+    const statusCounts = stats[0].statusCounts.reduce((acc, curr) => {
+      acc[curr._id || "unknown"] = curr.count;
+      return acc;
+    }, {});
+
+    const formattedStats = {
+      total: totalCount,
+      completed: statusCounts["completed"] || 0,
+      cancelled: statusCounts["cancelled"] || 0,
+      active: statusCounts["active"] || 0,
+    };
+
+    console.log("Formatted stats:", formattedStats);
+
     res.json({
       success: true,
-      data: stats[0] || { total: 0, completed: 0, cancelled: 0, active: 0 },
+      data: formattedStats,
     });
   } catch (error) {
-    console.error("Error getting ride stats:", error);
-    res.status(500).json({ message: "Error fetching ride statistics" });
+    console.error("Detailed error in getRideStats:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+    res.status(500).json({
+      success: false,
+      message: "Error fetching ride statistics",
+      error: error.message,
+    });
   }
 };
 
