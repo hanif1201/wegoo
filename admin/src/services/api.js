@@ -1,10 +1,8 @@
+// src/services/api.js
 import axios from "axios";
 
 // Use your actual API URL
-const API_URL =
-  process.env.NODE_ENV === "production"
-    ? "https://your-render-backend-url.onrender.com"
-    : "http://localhost:5000";
+const API_URL = "http://localhost:5000/api";
 
 const api = axios.create({
   baseURL: API_URL,
@@ -13,41 +11,30 @@ const api = axios.create({
   },
 });
 
-// Improved error handling in interceptor
-api.interceptors.response.use(
-  (response) => {
-    // Ensure response always has a data property
-    return {
-      ...response,
-      data: response.data || null,
-    };
+// Add a request interceptor for auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("adminToken");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
   },
   (error) => {
-    if (error.response) {
-      // Server responded with error status
-      console.error("Response error:", error.response);
-      return Promise.reject({
-        data: error.response.data || null,
-        status: error.response.status,
-        message: error.response.statusText,
-      });
-    } else if (error.request) {
-      // Request was made but no response received
-      console.error("Request error:", error.request);
-      return Promise.reject({
-        data: null,
-        status: 500,
-        message: "No response received from server",
-      });
-    } else {
-      // Something else went wrong
-      console.error("Error:", error.message);
-      return Promise.reject({
-        data: null,
-        status: 500,
-        message: error.message || "Unknown error occurred",
-      });
+    return Promise.reject(error);
+  }
+);
+
+// Add a response interceptor for error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Handle 401 errors by redirecting to login
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem("adminToken");
+      window.location.href = "/login";
     }
+    return Promise.reject(error);
   }
 );
 
