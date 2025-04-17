@@ -19,6 +19,6 @@ export const updateUserStatus = async (userId, status) => {
 };
 
 export const getUserStats = async () => {
-  const response = await api.get("/admin/users/stats");
+  const response = await api.get("/admin/user-stats");
   return response.data;
 };

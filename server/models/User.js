@@ -63,6 +63,11 @@ const UserSchema = new mongoose.Schema({
       },
     },
   ],
+  role: {
+    type: String,
+    enum: ["user", "admin", "rider"],
+    default: "user",
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -84,9 +89,13 @@ UserSchema.pre("save", async function (next) {
 });
 
 // Sign JWT and return
+
+// Add these improved JWT token methods to User.js and Rider.js
+
+// For User.js - Replace the existing getSignedJwtToken method
 UserSchema.methods.getSignedJwtToken = function () {
   return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE,
+    expiresIn: process.env.JWT_EXPIRE || "30d",
   });
 };
 

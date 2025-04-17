@@ -143,9 +143,13 @@ RiderSchema.pre("save", async function (next) {
 
 // Sign JWT and return
 RiderSchema.methods.getSignedJwtToken = function () {
-  return jwt.sign({ id: this._id, type: "rider" }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE,
-  });
+  return jwt.sign(
+    { id: this._id, type: "rider", role: "rider" },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRE || "30d",
+    }
+  );
 };
 
 // Match user entered password to hashed password in database

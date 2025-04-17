@@ -19,6 +19,6 @@ export const updateRideStatus = async (rideId, status) => {
 };
 
 export const getRideStats = async (period = "week") => {
-  const response = await api.get(`/admin/rides/stats?period=${period}`);
+  const response = await api.get(`/admin/ride-stats?period=${period}`);
   return response.data;
 };

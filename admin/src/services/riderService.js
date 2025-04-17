@@ -33,6 +33,6 @@ export const verifyRiderDocument = async (
 };
 
 export const getRiderStats = async () => {
-  const response = await api.get("/admin/riders/stats");
+  const response = await api.get("/admin/rider-stats");
   return response.data;
 };

@@ -19,7 +19,6 @@ const AdminSchema = new mongoose.Schema({
     ],
   },
   password: {
-    // Match field name with what's in your database
     type: String,
     required: [true, "Please add a password"],
     minlength: 6,
@@ -36,11 +35,25 @@ const AdminSchema = new mongoose.Schema({
   },
 });
 
+// Encrypt password using bcrypt
+AdminSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) {
+    next();
+  }
+
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+});
+
 // Sign JWT and return
 AdminSchema.methods.getSignedJwtToken = function () {
-  return jwt.sign({ id: this._id, role: this.role }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE,
-  });
+  return jwt.sign(
+    { id: this._id, role: this.role, type: "admin" },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRE || "30d",
+    }
+  );
 };
 
 // Match password

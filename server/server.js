@@ -16,19 +16,42 @@ connectDB();
 
 // Initialize app
 const app = express();
-const server = http.createServer(app); // Create HTTP server
+const server = http.createServer(app);
 const io = socketio(server, {
   cors: {
-    origin: "*", // Allow all origins in development
-    methods: ["GET", "POST"],
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
   },
-}); // Initialize Socket.io
+});
+
+// CORS configuration
+app.use(
+  cors({
+    origin:
+      process.env.NODE_ENV === "production"
+        ? "https://your-production-domain.com"
+        : "http://localhost:3000",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 // Middleware
 app.use(express.json());
-app.use(cors());
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
 app.use(morgan("dev"));
+
+// Debug middleware
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`, req.body);
+  next();
+});
 
 // Define routes
 app.get("/", (req, res) => {
@@ -38,12 +61,12 @@ app.get("/", (req, res) => {
 // API routes
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/rides", require("./routes/rides"));
-// Add additional routes here as they are created
+app.use("/api/admin", require("./routes/admin")); // Add this line
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).send("Server Error");
+  res.status(500).json({ message: "Server Error" }); // Changed to JSON response
 });
 
 // Set up socket.io connection handler
