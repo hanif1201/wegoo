@@ -1,64 +1,59 @@
 // middleware/auth.js
 const jwt = require("jsonwebtoken");
+const User = require("../models/User");
+const Rider = require("../models/Rider");
 
-const protect = (req, res, next) => {
-  try {
-    // Add detailed logging
-    console.log("Token verification attempt:", {
-      hasAuth: !!req.headers.authorization,
-      secret: process.env.JWT_SECRET?.substring(0, 5) + "...", // Log first 5 chars of secret for debugging
+exports.protect = async (req, res, next) => {
+  let token;
+
+  // Check if auth header exists and has the right format
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
+    // Set token from Bearer token in header
+    token = req.headers.authorization.split(" ")[1];
+  }
+
+  // Check if token exists
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: "Not authorized to access this route",
     });
+  }
 
-    if (
-      !req.headers.authorization ||
-      !req.headers.authorization.startsWith("Bearer")
-    ) {
-      return res.status(401).json({ message: "No token provided" });
+  try {
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Check if token is for user or rider
+    if (decoded.type === "rider") {
+      req.user = await Rider.findById(decoded.id);
+      req.userType = "rider";
+    } else {
+      req.user = await User.findById(decoded.id);
+      req.userType = "user";
     }
 
-    const token = req.headers.authorization.split(" ")[1];
-
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      console.log("Token decoded successfully:", {
-        id: decoded.id,
-        role: decoded.role,
-        exp: new Date(decoded.exp * 1000).toISOString(),
-      });
-      req.user = decoded;
-      next();
-    } catch (error) {
-      console.log("Token verification failed:", {
-        error: error.message,
-        token: token.substring(0, 20) + "...",
-        secret: process.env.JWT_SECRET?.substring(0, 5) + "...",
-      });
-      return res.status(403).json({ message: "Invalid token" });
-    }
-  } catch (error) {
-    console.log("Protect middleware error:", error);
-    return res.status(500).json({ message: "Server error" });
+    next();
+  } catch (err) {
+    return res.status(401).json({
+      success: false,
+      message: "Not authorized to access this route",
+    });
   }
 };
 
-const authorize = (...roles) => {
+// Grant access to specific roles
+exports.authorize = (...roles) => {
   return (req, res, next) => {
-    if (!req.user) {
-      return res.status(403).json({ message: "User not found in request" });
-    }
-
-    console.log("Authorization check:", {
-      userRole: req.user.role,
-      requiredRoles: roles,
-    });
-
-    if (!roles.includes(req.user.role)) {
+    if (!roles.includes(req.userType)) {
       return res.status(403).json({
-        message: `Role ${req.user.role} is not authorized`,
+        success: false,
+        message: `User role ${req.userType} is not authorized to access this route`,
       });
     }
     next();
   };
 };
-
-module.exports = { protect, authorize };

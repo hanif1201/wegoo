@@ -12,11 +12,6 @@ const RideSchema = new mongoose.Schema({
     ref: "Rider",
     default: null,
   },
-  preferredRiderGender: {
-    type: String,
-    enum: ["male", "female", "no_preference"],
-    default: "no_preference",
-  },
   pickupLocation: {
     address: {
       type: String,
@@ -86,7 +81,7 @@ const RideSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ["credit_card", "paypal", "cash", "card"],
+    enum: ["credit_card", "paypal", "cash"],
     default: "cash",
   },
   route: {

@@ -23,11 +23,6 @@ const RiderSchema = new mongoose.Schema({
     required: [true, "Please add a phone number"],
     unique: true,
   },
-  gender: {
-    type: String,
-    enum: ["male", "female", "other", "not_specified"],
-    default: "not_specified",
-  },
   passwordHash: {
     type: String,
     required: [true, "Please add a password"],

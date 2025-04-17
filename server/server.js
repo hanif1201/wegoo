@@ -1,11 +1,11 @@
-// server.js
+// Update your server.js file
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-const http = require("http");
-const socketio = require("socket.io");
+const http = require("http"); // Add this
+const socketio = require("socket.io"); // Add this
 const connectDB = require("./config/db");
 
 // Load environment variables
@@ -16,82 +16,45 @@ connectDB();
 
 // Initialize app
 const app = express();
-const server = http.createServer(app);
+const server = http.createServer(app); // Create HTTP server
 const io = socketio(server, {
   cors: {
-    origin: "*",
+    origin: "*", // Allow all origins in development
     methods: ["GET", "POST"],
   },
-});
+}); // Initialize Socket.io
 
 // Middleware
 app.use(express.json());
-
-// Correct CORS configuration
-app.use(
-  cors({
-    origin: [
-      "https://wegoo-sepia.vercel.app", // Remove /api
-      "http://localhost:3000", // Remove /api
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Added methods
-    credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"], // Added allowed headers
-  })
-);
-
-// Handle OPTIONS preflight requests
-app.options("*", cors());
-
-// Debug middleware for incoming requests
-app.use((req, res, next) => {
-  console.log("Incoming request:", {
-    method: req.method,
-    path: req.path,
-    headers: req.headers,
-    body: req.body,
-  });
-  next();
-});
-
-// Security and logging middleware
+app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
 
-// Basic health check endpoint
+// Define routes
 app.get("/", (req, res) => {
   res.send("Rider App API Running");
 });
 
-// General request logging middleware
-app.use((req, res, next) => {
-  // Log when response is sent
-  res.on("finish", () => {
-    // console.log(`📤 Response: ${res.statusCode} ${req.method} ${req.path}`);
-  });
-  next();
-});
-
-// API routes - fixed to remove duplicates
+// API routes
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/rides", require("./routes/rides"));
-app.use("/api/admin", require("./routes/admin"));
+// Add additional routes here as they are created
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  res.status(err.status || 500).json({
-    error: err.message || "Server Error",
-    path: req.path,
-  });
+  console.error(err.stack);
+  res.status(500).send("Server Error");
 });
 
 // Set up socket.io connection handler
 io.on("connection", (socket) => {
+  console.log(`New WebSocket connection: ${socket.id}`);
+
   // Pass socket to the socket handler
   require("./socket")(io, socket);
 
   socket.on("disconnect", () => {
-    // console.log(`WebSocket disconnected: ${socket.id}`);
+    console.log(`WebSocket disconnected: ${socket.id}`);
   });
 });
 

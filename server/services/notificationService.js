@@ -43,20 +43,11 @@ exports.notifyRider = async (riderId, title, body, data = {}) => {
 // Notify nearby riders about a new ride request
 exports.notifyNearbyRiders = async (rideRequest) => {
   try {
-    // In a real app, you would filter riders by location and gender preference
-    const genderFilter = {};
-
-    // Only add gender filter if user has a preference
-    if (rideRequest.preferredRiderGender !== "no_preference") {
-      genderFilter.gender = rideRequest.preferredRiderGender;
-    }
-
-    // In a real app, you would query for riders near the pickup location with the gender filter
+    // In a real app, you would query for riders near the pickup location
     // For example:
     /*
     const nearbyRiders = await Rider.find({
       isAvailable: true,
-      ...genderFilter,
       'currentLocation.coordinates': {
         $near: {
           $geometry: {
@@ -72,15 +63,20 @@ exports.notifyNearbyRiders = async (rideRequest) => {
     });
     */
 
+    // For this example, we'll just log it
     console.log(
-      `Notifying nearby ${
-        rideRequest.preferredRiderGender !== "no_preference"
-          ? rideRequest.preferredRiderGender
-          : ""
-      } riders about ride request ${rideRequest._id}`
+      `Notifying nearby riders about ride request ${rideRequest._id}`
     );
 
-    // ... rest of the method remains the same
+    // In a real app, you would loop through nearby riders and send each a notification
+    // nearbyRiders.forEach(rider => {
+    //   this.notifyRider(
+    //     rider._id,
+    //     'New Ride Request',
+    //     `New ride request ${rideRequest.pickupLocation.address}`,
+    //     { rideId: rideRequest._id }
+    //   );
+    // });
   } catch (error) {
     console.error("Error notifying nearby riders:", error);
   }
