@@ -45,7 +45,8 @@ export const fetchRideStats = createAsyncThunk(
   "rides/fetchStats",
   async (period = "week", { rejectWithValue }) => {
     try {
-      return await rideService.getRideStats(period);
+      const response = await rideService.getRideStats(period);
+      return response; // Return entire response
     } catch (error) {
       return rejectWithValue(
         error.response?.data || { message: "Failed to fetch ride statistics" }
@@ -146,7 +147,7 @@ const ridesSlice = createSlice({
       })
       .addCase(fetchRideStats.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.stats = action.payload.data;
+        state.stats = action.payload.data; // This assumes the response has a data property
       })
       .addCase(fetchRideStats.rejected, (state, action) => {
         state.isLoading = false;

@@ -1,6 +1,6 @@
 // src/pages/DashboardPage.js
-import React, { useEffect, useState } from "react";
-import { Grid, Typography, Box, Paper } from "@mui/material";
+import React, { useEffect, useState, useMemo } from "react";
+import { Grid, Typography, Box, Paper, CircularProgress } from "@mui/material";
 import {
   People as PeopleIcon,
   DirectionsCar as RidersIcon,
@@ -51,44 +51,71 @@ const activities = [
 const DashboardPage = () => {
   const dispatch = useDispatch();
 
-  // Directly extract the values from Redux state with better defaults
-  const userStats = useSelector((state) => state.users?.stats || {});
-  const rideStats = useSelector((state) => state.rides?.stats || {});
+  // Using memoized selectors to prevent unnecessary re-renders
+  const userStats = useSelector((state) => state.users.stats);
+  const rideStats = useSelector((state) => state.rides.stats);
+  const userLoading = useSelector((state) => state.users.isLoading);
+  const rideLoading = useSelector((state) => state.rides.isLoading);
 
-  // Add a loading state to handle initial render
-  const [isLoading, setIsLoading] = useState(true);
+  // Derive loading state from both slices
+  const isLoading = useMemo(
+    () => userLoading || rideLoading,
+    [userLoading, rideLoading]
+  );
 
   useEffect(() => {
-    // Set loading to true when fetching starts
-    setIsLoading(true);
-    console.log("Fetching stats...");
-
-    // Use Promise.all to wait for both API calls
-    Promise.all([dispatch(fetchUserStats()), dispatch(fetchRideStats("week"))])
-      .then(() => {
-        setIsLoading(false);
+    const fetchStats = async () => {
+      console.log("Fetching stats...");
+      try {
+        // Using Promise.all for parallel requests
+        await Promise.all([
+          dispatch(fetchUserStats()).unwrap(),
+          dispatch(fetchRideStats("week")).unwrap(),
+        ]);
         console.log("Stats fetched successfully");
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("Error fetching stats:", error);
-        setIsLoading(false);
-      });
+      }
+    };
+
+    fetchStats();
+
+    // Set up refresh interval for real-time updates
+    const interval = setInterval(fetchStats, 300000); // Refresh every 5 minutes
+
+    return () => clearInterval(interval);
   }, [dispatch]);
 
-  // More detailed logging to debug the state
-  console.log("User Stats from Redux:", userStats);
-  console.log("Ride Stats from Redux:", rideStats);
-  console.log("Loading State:", isLoading);
+  // For debugging
+  useEffect(() => {
+    if (userStats) {
+      console.log("User Stats from Redux:", userStats);
+    }
+    if (rideStats) {
+      console.log("Ride Stats from Redux:", rideStats);
+    }
+    console.log("Loading State:", isLoading);
+  }, [userStats, rideStats, isLoading]);
 
   // Safely access values with defaults
-  const totalUsers = userStats?.totalUsers || 0;
-  const totalRiders = userStats?.totalRiders || 0;
-  const totalRides = rideStats?.totalRides || 0;
-  const totalRevenue = rideStats?.totalRevenue || 0;
+  const totalUsers = userStats?.total || 0;
+  const activeUsers = userStats?.active || 0;
+  const inactiveUsers = userStats?.inactive || 0;
+
+  const totalRides = rideStats?.total || 0;
+  const completedRides = rideStats?.completed || 0;
+  const cancelledRides = rideStats?.cancelled || 0;
+  const activeRides = rideStats?.active || 0;
+
+  // Derived metrics with safety checks
+  const totalRevenue = rideStats?.revenue || 0;
   const avgDistance = rideStats?.avgDistance || 0;
   const avgDuration = rideStats?.avgDuration || 0;
   const avgFare = rideStats?.avgFare || 0;
-  const retentionRate = userStats?.retentionRate || 0;
+
+  // Calculate retention rate if data is available
+  const retentionRate =
+    userStats && userStats.total > 0 ? (activeUsers / totalUsers) * 100 : 0;
 
   return (
     <Layout title='Dashboard'>
@@ -99,107 +126,129 @@ const DashboardPage = () => {
         <Typography variant='body1' color='text.secondary'>
           Here's what's happening with your platform today
         </Typography>
-        {isLoading && (
-          <Typography variant='body2' color='text.secondary' sx={{ mt: 2 }}>
-            Loading dashboard data...
-          </Typography>
-        )}
       </Box>
 
-      <Grid container spacing={3}>
-        {/* Stats Cards */}
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title='Total Users'
-            value={totalUsers}
-            icon={<PeopleIcon />}
-            color='primary'
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title='Total Riders'
-            value={totalRiders}
-            icon={<RidersIcon />}
-            color='success'
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title='Total Rides'
-            value={totalRides}
-            icon={<RidesIcon />}
-            color='info'
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title='Total Revenue'
-            value={`$${totalRevenue.toFixed(2)}`}
-            icon={<RevenueIcon />}
-            color='warning'
-          />
-        </Grid>
+      {isLoading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", my: 8 }}>
+          <CircularProgress />
+          <Typography variant='body1' sx={{ ml: 2 }}>
+            Loading dashboard data...
+          </Typography>
+        </Box>
+      ) : (
+        <Grid container spacing={3}>
+          {/* Stats Cards */}
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              title='Total Users'
+              value={totalUsers}
+              icon={<PeopleIcon />}
+              color='primary'
+              subtext={`${activeUsers} active, ${inactiveUsers} inactive`}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              title='Total Rides'
+              value={totalRides}
+              icon={<RidesIcon />}
+              color='success'
+              subtext={`${completedRides} completed, ${activeRides} active`}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              title='Ride Completion Rate'
+              value={`${
+                totalRides > 0
+                  ? ((completedRides / totalRides) * 100).toFixed(1)
+                  : 0
+              }%`}
+              icon={<RidersIcon />}
+              color='info'
+              subtext={`${cancelledRides} cancelled rides`}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              title='Total Revenue'
+              value={`$${totalRevenue.toFixed(2)}`}
+              icon={<RevenueIcon />}
+              color='warning'
+              subtext={`Avg $${avgFare.toFixed(2)} per ride`}
+            />
+          </Grid>
 
-        {/* Charts */}
-        <Grid item xs={12} md={8}>
-          <RevenueChart data={revenueData} />
-        </Grid>
+          {/* Charts */}
+          <Grid item xs={12} md={8}>
+            <Paper sx={{ p: 3, height: "100%" }}>
+              <Typography variant='h6' gutterBottom>
+                Revenue Trends
+              </Typography>
+              <RevenueChart data={revenueData} />
+            </Paper>
+          </Grid>
 
-        {/* Activity Feed */}
-        <Grid item xs={12} md={4}>
-          <ActivityFeed activities={activities} />
-        </Grid>
+          {/* Activity Feed */}
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 3, height: "100%" }}>
+              <Typography variant='h6' gutterBottom>
+                Recent Activity
+              </Typography>
+              <ActivityFeed activities={activities} />
+            </Paper>
+          </Grid>
 
-        {/* Additional Metrics */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant='h6' gutterBottom>
-              Key Performance Metrics
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={3}>
-                <Box>
-                  <Typography variant='body2' color='text.secondary'>
-                    Average Ride Distance
-                  </Typography>
-                  <Typography variant='h6'>
-                    {avgDistance.toFixed(2)} km
-                  </Typography>
-                </Box>
+          {/* Additional Metrics */}
+          <Grid item xs={12}>
+            <Paper sx={{ p: 3 }}>
+              <Typography variant='h6' gutterBottom>
+                Key Performance Metrics
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={3}>
+                  <Box>
+                    <Typography variant='body2' color='text.secondary'>
+                      Average Ride Distance
+                    </Typography>
+                    <Typography variant='h6'>
+                      {avgDistance.toFixed(2)} km
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <Box>
+                    <Typography variant='body2' color='text.secondary'>
+                      Average Ride Duration
+                    </Typography>
+                    <Typography variant='h6'>
+                      {avgDuration.toFixed(0)} min
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <Box>
+                    <Typography variant='body2' color='text.secondary'>
+                      Average Fare
+                    </Typography>
+                    <Typography variant='h6'>${avgFare.toFixed(2)}</Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <Box>
+                    <Typography variant='body2' color='text.secondary'>
+                      User Retention Rate
+                    </Typography>
+                    <Typography variant='h6'>
+                      {retentionRate.toFixed(1)}%
+                    </Typography>
+                  </Box>
+                </Grid>
               </Grid>
-              <Grid item xs={12} sm={3}>
-                <Box>
-                  <Typography variant='body2' color='text.secondary'>
-                    Average Ride Duration
-                  </Typography>
-                  <Typography variant='h6'>
-                    {avgDuration.toFixed(0)} min
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <Box>
-                  <Typography variant='body2' color='text.secondary'>
-                    Average Fare
-                  </Typography>
-                  <Typography variant='h6'>${avgFare.toFixed(2)}</Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <Box>
-                  <Typography variant='body2' color='text.secondary'>
-                    User Retention Rate
-                  </Typography>
-                  <Typography variant='h6'>
-                    {retentionRate.toFixed(1)}%
-                  </Typography>
-                </Box>
-              </Grid>
-            </Grid>
-          </Paper>
+            </Paper>
+          </Grid>
         </Grid>
-      </Grid>
+      )}
     </Layout>
   );
 };
