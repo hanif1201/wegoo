@@ -43,11 +43,20 @@ exports.notifyRider = async (riderId, title, body, data = {}) => {
 // Notify nearby riders about a new ride request
 exports.notifyNearbyRiders = async (rideRequest) => {
   try {
-    // In a real app, you would query for riders near the pickup location
+    // In a real app, you would filter riders by location and gender preference
+    const genderFilter = {};
+
+    // Only add gender filter if user has a preference
+    if (rideRequest.preferredRiderGender !== "no_preference") {
+      genderFilter.gender = rideRequest.preferredRiderGender;
+    }
+
+    // In a real app, you would query for riders near the pickup location with the gender filter
     // For example:
     /*
     const nearbyRiders = await Rider.find({
       isAvailable: true,
+      ...genderFilter,
       'currentLocation.coordinates': {
         $near: {
           $geometry: {
@@ -63,9 +72,12 @@ exports.notifyNearbyRiders = async (rideRequest) => {
     });
     */
 
-    // For this example, we'll just log it
     console.log(
-      `Notifying nearby riders about ride request ${rideRequest._id}`
+      `Notifying nearby ${
+        rideRequest.preferredRiderGender !== "no_preference"
+          ? rideRequest.preferredRiderGender
+          : ""
+      } riders about ride request ${rideRequest._id}`
     );
 
     // In a real app, you would loop through nearby riders and send each a notification

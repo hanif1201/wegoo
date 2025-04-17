@@ -9,6 +9,11 @@ const RiderSchema = new mongoose.Schema({
     required: [true, "Please add a name"],
     trim: true,
   },
+  gender: {
+    type: String,
+    enum: ["male", "female", "other", "not_specified"],
+    default: "not_specified",
+  },
   email: {
     type: String,
     required: [true, "Please add an email"],

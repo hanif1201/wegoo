@@ -9,13 +9,20 @@ const notificationService = require("../services/notificationService");
 // @access  Private (User only)
 exports.createRideRequest = async (req, res) => {
   try {
-    const { pickupLocation, dropoffLocation, fare, paymentMethod } = req.body;
+    const {
+      pickupLocation,
+      dropoffLocation,
+      preferredRiderGender,
+      fare,
+      paymentMethod,
+    } = req.body;
 
     // Create ride request
     const ride = await Ride.create({
       userId: req.user.id,
       pickupLocation,
       dropoffLocation,
+      preferredRiderGender,
       fare,
       paymentMethod,
     });
@@ -40,10 +47,25 @@ exports.createRideRequest = async (req, res) => {
 // @access  Private (Rider only)
 exports.getAvailableRides = async (req, res) => {
   try {
-    const rides = await Ride.find({
+    // Get rider's gender for filtering
+    const rider = await Rider.findById(req.user.id);
+
+    // Build filter query
+    const filter = {
       status: "requested",
       riderId: null,
-    }).populate("userId", "name profilePicture rating");
+    };
+
+    // Add gender filter - only show rides where no gender preference is set or rider matches preference
+    filter.$or = [
+      { preferredRiderGender: "no_preference" },
+      { preferredRiderGender: rider.gender },
+    ];
+
+    const rides = await Ride.find(filter).populate(
+      "userId",
+      "name profilePicture rating"
+    );
 
     res.status(200).json({
       success: true,

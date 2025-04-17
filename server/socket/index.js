@@ -39,11 +39,23 @@ module.exports = (io, socket) => {
     try {
       console.log("New ride request created");
 
-      // Broadcast to all available riders
-      io.to("availableRiders").emit("newRideRequest", {
-        ...rideData,
-        userId: socket.userId,
-      });
+      // Get rider's gender preference
+      const preferredGender = rideData.preferredRiderGender || "no_preference";
+
+      if (preferredGender === "no_preference") {
+        // Broadcast to all available riders
+        io.to("availableRiders").emit("newRideRequest", {
+          ...rideData,
+          userId: socket.userId,
+        });
+      } else {
+        // Broadcast only to riders of the preferred gender
+        // We would need to create rooms for riders based on gender
+        io.to(`availableRiders-${preferredGender}`).emit("newRideRequest", {
+          ...rideData,
+          userId: socket.userId,
+        });
+      }
     } catch (error) {
       console.error("Error in createRideRequest:", error);
       socket.emit("errorMessage", { message: "Error creating ride request" });
@@ -140,15 +152,30 @@ module.exports = (io, socket) => {
   // Rider availability toggle
   socket.on("toggleAvailability", async ({ riderId, isAvailable }) => {
     try {
+      // Get rider data including gender
+      const rider = await Rider.findById(riderId);
+
       // Update rider availability in database
       await Rider.findByIdAndUpdate(riderId, { isAvailable });
 
-      // Join or leave the available riders room
       if (isAvailable) {
+        // Join the general available riders room
         socket.join("availableRiders");
+
+        // Also join gender-specific room for targeted broadcasts
+        if (rider.gender) {
+          socket.join(`availableRiders-${rider.gender}`);
+        }
+
         console.log(`Rider ${riderId} is now available`);
       } else {
+        // Leave the available riders rooms
         socket.leave("availableRiders");
+
+        if (rider.gender) {
+          socket.leave(`availableRiders-${rider.gender}`);
+        }
+
         console.log(`Rider ${riderId} is now unavailable`);
       }
     } catch (error) {

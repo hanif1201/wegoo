@@ -7,6 +7,11 @@ const RideSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
+  preferredRiderGender: {
+    type: String,
+    enum: ["male", "female", "no_preference"],
+    default: "no_preference",
+  },
   riderId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Rider",
