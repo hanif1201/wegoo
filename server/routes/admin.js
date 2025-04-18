@@ -47,10 +47,11 @@ router.put("/riders/:riderId/documents/:documentId", verifyRiderDocument);
 router.get("/riders/stats", getRiderStats);
 
 // Ride management routes
-router.get("/rides", getRides);
-router.get("/rides/:rideId", getRideById);
-router.put("/rides/:rideId/status", updateRideStatus);
 router.get("/rides/stats", getRideStats);
+router.get("/rides/:rideId", getRideById);
+router.get("/rides", getRides);
+
+router.put("/rides/:rideId/status", updateRideStatus);
 
 // Dashboard route
 router.get("/dashboard", getDashboardStats);

@@ -353,37 +353,79 @@ exports.rateRide = async (req, res) => {
 // @access  Private/Admin
 exports.getRideStats = async (req, res) => {
   try {
-    console.log("Starting getRideStats...");
     const { period } = req.query;
-
-    // Calculate date range
     const dateRange = getDateRange(period);
 
+    // Aggregate pipeline for ride statistics
     const stats = await Ride.aggregate([
       {
         $match: {
-          createdAt: { $gte: dateRange.start, $lte: dateRange.end },
+          createdAt: {
+            $gte: dateRange.start,
+            $lte: dateRange.end,
+          },
         },
       },
       {
         $group: {
           _id: null,
-          totalRides: { $sum: 1 },
-          totalDistance: { $sum: "$distance" },
-          avgDuration: { $avg: "$duration" },
-          revenue: { $sum: "$fare" },
+          total: { $sum: 1 },
+          completed: {
+            $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
+          },
+          cancelled: {
+            $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] },
+          },
+          active: {
+            $sum: { $cond: [{ $eq: ["$status", "active"] }, 1, 0] },
+          },
+          revenue: { $sum: "$fare.total" },
+          totalDistance: { $sum: "$route.distance" },
+          totalDuration: { $sum: "$route.duration" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          total: 1,
+          completed: 1,
+          cancelled: 1,
+          active: 1,
+          revenue: 1,
+          avgDistance: {
+            $round: [
+              { $divide: ["$totalDistance", { $max: ["$total", 1] }] },
+              2,
+            ],
+          },
+          avgDuration: {
+            $round: [
+              { $divide: ["$totalDuration", { $max: ["$total", 1] }] },
+              2,
+            ],
+          },
+          avgFare: {
+            $round: [{ $divide: ["$revenue", { $max: ["$total", 1] }] }, 2],
+          },
         },
       },
     ]);
 
+    // Return default values if no stats found
+    const defaultStats = {
+      total: 0,
+      completed: 0,
+      cancelled: 0,
+      active: 0,
+      revenue: 0,
+      avgDistance: 0,
+      avgDuration: 0,
+      avgFare: 0,
+    };
+
     res.json({
       success: true,
-      data: stats[0] || {
-        totalRides: 0,
-        totalDistance: 0,
-        avgDuration: 0,
-        revenue: 0,
-      },
+      data: stats.length > 0 ? stats[0] : defaultStats,
     });
   } catch (error) {
     console.error("Error in getRideStats:", error);
@@ -393,24 +435,3 @@ exports.getRideStats = async (req, res) => {
     });
   }
 };
-
-function getDateRange(period) {
-  const end = new Date();
-  const start = new Date();
-
-  switch (period) {
-    case "week":
-      start.setDate(start.getDate() - 7);
-      break;
-    case "month":
-      start.setMonth(start.getMonth() - 1);
-      break;
-    case "year":
-      start.setFullYear(start.getFullYear() - 1);
-      break;
-    default:
-      start.setDate(start.getDate() - 7); // Default to week
-  }
-
-  return { start, end };
-}

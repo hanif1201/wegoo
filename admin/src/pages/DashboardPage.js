@@ -148,7 +148,7 @@ const DashboardPage = () => {
     <Layout title='Dashboard'>
       <Box sx={{ mb: 4 }}>
         <Typography variant='h4' gutterBottom>
-          Welcome to Rider App Admin
+          Welcome to WeGoo
         </Typography>
         <Typography variant='body1' color='text.secondary'>
           Here's what's happening with your platform today
