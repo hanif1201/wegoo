@@ -599,7 +599,7 @@ exports.updateRideStatus = async (req, res) => {
 };
 
 // @desc    Get ride statistics
-// @route   GET /api/admin/ride-stats
+// @route   GET /api/admin/rides/stats
 // @access  Private/Admin
 exports.getRideStats = async (req, res) => {
   try {
@@ -620,56 +620,97 @@ exports.getRideStats = async (req, res) => {
     const rideCount = await Ride.countDocuments();
     console.log("Total rides found:", rideCount);
 
+    // Use a longer date range to include your March data
     let dateFilter = {};
     if (period === "week") {
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
+      const sixtyDaysAgo = new Date();
+      sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60); // Changed from 7 to 60 days
       dateFilter = {
-        createdAt: { $gte: weekAgo },
+        createdAt: { $gte: sixtyDaysAgo },
       };
     }
 
     console.log("Date filter:", dateFilter);
 
-    const stats = await Ride.aggregate([
-      {
-        $match: dateFilter,
-      },
-      {
-        $facet: {
-          totalCount: [{ $count: "count" }],
-          statusCounts: [
-            {
-              $group: {
-                _id: "$status",
-                count: { $sum: 1 },
-              },
-            },
-          ],
-        },
-      },
-    ]);
+    // Using a simpler query approach to avoid issues
+    const totalRides = await Ride.countDocuments(dateFilter);
+    const completedRides = await Ride.countDocuments({
+      ...dateFilter,
+      status: "completed",
+    });
+    const cancelledRides = await Ride.countDocuments({
+      ...dateFilter,
+      status: "cancelled",
+    });
+    const activeRides = await Ride.countDocuments({
+      ...dateFilter,
+      status: { $in: ["requested", "accepted", "in-progress"] },
+    });
 
-    console.log("Aggregation result:", stats);
+    // Calculate revenue from completed rides
+    const completedRidesData = await Ride.find({
+      ...dateFilter,
+      status: "completed",
+    });
 
-    const totalCount = stats[0].totalCount[0]?.count || 0;
-    const statusCounts = stats[0].statusCounts.reduce((acc, curr) => {
-      acc[curr._id || "unknown"] = curr.count;
-      return acc;
-    }, {});
+    let totalRevenue = 0;
+    let totalDistance = 0;
+    let totalDuration = 0;
 
-    const formattedStats = {
-      total: totalCount,
-      completed: statusCounts["completed"] || 0,
-      cancelled: statusCounts["cancelled"] || 0,
-      active: statusCounts["active"] || 0,
+    // Log the first completed ride to see its structure
+    if (completedRidesData.length > 0) {
+      console.log(
+        "Sample completed ride:",
+        JSON.stringify(completedRidesData[0].fare, null, 2)
+      );
+    }
+
+    completedRidesData.forEach((ride) => {
+      // Check for fare.total
+      if (ride.fare && typeof ride.fare.total === "number") {
+        totalRevenue += ride.fare.total;
+      }
+      // If fare is just a number
+      else if (typeof ride.fare === "number") {
+        totalRevenue += ride.fare;
+      }
+      // Debug log when fare structure is unexpected
+      else if (ride.fare) {
+        console.log("Unknown fare structure:", typeof ride.fare, ride.fare);
+      }
+
+      // Extract distance
+      if (ride.route && typeof ride.route.distance === "number") {
+        totalDistance += ride.route.distance;
+      }
+
+      // Extract duration
+      if (ride.route && typeof ride.route.duration === "number") {
+        totalDuration += ride.route.duration;
+      }
+    });
+
+    const avgDistance = completedRides > 0 ? totalDistance / completedRides : 0;
+    const avgDuration = completedRides > 0 ? totalDuration / completedRides : 0;
+    const avgFare = completedRides > 0 ? totalRevenue / completedRides : 0;
+
+    const stats = {
+      total: totalRides,
+      completed: completedRides,
+      cancelled: cancelledRides,
+      active: activeRides,
+      revenue: totalRevenue,
+      totalDistance,
+      avgDistance,
+      avgDuration,
+      avgFare,
     };
 
-    console.log("Formatted stats:", formattedStats);
+    console.log("Formatted stats:", stats);
 
     res.json({
       success: true,
-      data: formattedStats,
+      data: stats,
     });
   } catch (error) {
     console.error("Detailed error in getRideStats:", {

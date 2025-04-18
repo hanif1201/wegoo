@@ -1,5 +1,5 @@
 // src/pages/DashboardPage.js
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { Grid, Typography, Box, Paper, CircularProgress } from "@mui/material";
 import {
   People as PeopleIcon,
@@ -67,14 +67,34 @@ const DashboardPage = () => {
     const fetchStats = async () => {
       console.log("Fetching stats...");
       try {
-        // Using Promise.all for parallel requests
-        await Promise.all([
-          dispatch(fetchUserStats()).unwrap(),
-          dispatch(fetchRideStats("week")).unwrap(),
-        ]);
-        console.log("Stats fetched successfully");
+        // Fetch user stats first
+        await dispatch(fetchUserStats()).unwrap();
+
+        // Try to fetch ride stats, but don't let it block if it fails
+        try {
+          await dispatch(fetchRideStats("week")).unwrap();
+          console.log("All stats fetched successfully");
+        } catch (rideError) {
+          console.error("Error fetching ride stats:", rideError);
+          // Set fallback ride stats
+          dispatch({
+            type: "rides/fetchStats/fulfilled",
+            payload: {
+              data: {
+                total: 0,
+                completed: 0,
+                cancelled: 0,
+                active: 0,
+                revenue: 0,
+                avgDistance: 0,
+                avgDuration: 0,
+                avgFare: 0,
+              },
+            },
+          });
+        }
       } catch (error) {
-        console.error("Error fetching stats:", error);
+        console.error("Error fetching user stats:", error);
       }
     };
 
@@ -93,29 +113,36 @@ const DashboardPage = () => {
     }
     if (rideStats) {
       console.log("Ride Stats from Redux:", rideStats);
+      console.log(
+        "Detailed Ride Stats Structure:",
+        JSON.stringify(rideStats, null, 2)
+      );
     }
     console.log("Loading State:", isLoading);
   }, [userStats, rideStats, isLoading]);
 
-  // Safely access values with defaults
-  const totalUsers = userStats?.total || 0;
-  const activeUsers = userStats?.active || 0;
-  const inactiveUsers = userStats?.inactive || 0;
+  // Safely access values with defaults - handle nested data structure
+  const totalUsers = userStats?.data?.totalUsers || 0;
+  const activeUsers = userStats?.data?.activeUsers || 0;
+  const inactiveUsers = totalUsers - activeUsers;
 
-  const totalRides = rideStats?.total || 0;
-  const completedRides = rideStats?.completed || 0;
-  const cancelledRides = rideStats?.cancelled || 0;
-  const activeRides = rideStats?.active || 0;
+  // Try multiple possible data paths for ride stats
+  const totalRides = rideStats?.data?.totalRides || rideStats?.data?.total || 0;
+  const completedRides = rideStats?.data?.completed || 0;
+  const cancelledRides = rideStats?.data?.cancelled || 0;
+  const activeRides = rideStats?.data?.active || 0;
 
   // Derived metrics with safety checks
-  const totalRevenue = rideStats?.revenue || 0;
-  const avgDistance = rideStats?.avgDistance || 0;
-  const avgDuration = rideStats?.avgDuration || 0;
-  const avgFare = rideStats?.avgFare || 0;
+  const totalRevenue =
+    rideStats?.data?.totalEarnings || rideStats?.data?.revenue || 0;
+  const avgDistance = rideStats?.data?.totalDistance
+    ? rideStats.data.totalDistance / totalRides
+    : 0;
+  const avgDuration = rideStats?.data?.avgDuration || 0;
+  const avgFare = totalRides > 0 ? totalRevenue / totalRides : 0;
 
   // Calculate retention rate if data is available
-  const retentionRate =
-    userStats && userStats.total > 0 ? (activeUsers / totalUsers) * 100 : 0;
+  const retentionRate = totalUsers > 0 ? (activeUsers / totalUsers) * 100 : 0;
 
   return (
     <Layout title='Dashboard'>

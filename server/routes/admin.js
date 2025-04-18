@@ -33,23 +33,24 @@ router.use(authorize("admin"));
 router.get("/me", getMe);
 
 // User management routes
-router.get("/users", getUsers);
+router.get("/users/stats", getUserStats);
 router.get("/users/:userId", getUserById);
+router.get("/users", getUsers);
+
 router.put("/users/:userId/status", updateUserStatus);
-router.get("/user-stats", getUserStats);
 
 // Rider management routes
 router.get("/riders", getRiders);
 router.get("/riders/:riderId", getRiderById);
 router.put("/riders/:riderId/status", updateRiderStatus);
 router.put("/riders/:riderId/documents/:documentId", verifyRiderDocument);
-router.get("/rider-stats", getRiderStats);
+router.get("/riders/stats", getRiderStats);
 
 // Ride management routes
 router.get("/rides", getRides);
 router.get("/rides/:rideId", getRideById);
 router.put("/rides/:rideId/status", updateRideStatus);
-router.get("/ride-stats", getRideStats);
+router.get("/rides/stats", getRideStats);
 
 // Dashboard route
 router.get("/dashboard", getDashboardStats);
