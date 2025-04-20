@@ -63,6 +63,8 @@ const DashboardPage = () => {
     [userLoading, rideLoading]
   );
 
+  // Removed the debugging useEffect as it was causing additional renders
+
   useEffect(() => {
     const fetchStats = async () => {
       console.log("Fetching stats...");
@@ -98,28 +100,14 @@ const DashboardPage = () => {
       }
     };
 
+    // Call fetch stats once when component mounts
     fetchStats();
 
     // Set up refresh interval for real-time updates
     const interval = setInterval(fetchStats, 300000); // Refresh every 5 minutes
 
     return () => clearInterval(interval);
-  }, [dispatch]);
-
-  // For debugging
-  useEffect(() => {
-    if (userStats) {
-      console.log("User Stats from Redux:", userStats);
-    }
-    if (rideStats) {
-      console.log("Ride Stats from Redux:", rideStats);
-      console.log(
-        "Detailed Ride Stats Structure:",
-        JSON.stringify(rideStats, null, 2)
-      );
-    }
-    console.log("Loading State:", isLoading);
-  }, [userStats, rideStats, isLoading]);
+  }, [dispatch]); // Only depends on dispatch, which is stable
 
   // Safely access values with defaults - handle nested data structure
   const totalUsers = userStats?.data?.totalUsers || 0;
